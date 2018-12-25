@@ -129,23 +129,17 @@ struct Entry {
 
 fn walk_entries<I>(paths: I) -> (u64, u64, Vec<Entry>)
 where
-    I: IntoIterator<Item = PathBuf>,
+    I: IntoIterator<Item = PathBuf>, // TODO figure out how to borrow this as a &'a Path
 {
-    paths
-        .into_iter()
-        .map(|p| {
-            let sz = get_sizes(&p);
-            (p, sz)
-        })
-        .fold(
-            (0, 0, vec![]),
-            |(total_size, total_count, mut entries), (path, (size, count))| {
-                if path.exists() {
-                    entries.push(Entry { path, size, count })
-                }
-                (total_size + size, total_count + count, entries)
-            },
-        )
+    paths.into_iter().map(|p| (get_sizes(&p), p)).fold(
+        (0, 0, vec![]),
+        |(total_size, total_count, mut entries), ((size, count), path)| {
+            if path.exists() {
+                entries.push(Entry { path, size, count })
+            }
+            (total_size + size, total_count + count, entries)
+        },
+    )
 }
 
 fn get_sizes(path: &Path) -> (u64, u64) {
