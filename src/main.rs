@@ -75,10 +75,7 @@ fn main() {
     .collect::<Result<_, _>>()
     .unwrap(); // probably can't happen
 
-    let (total_size, total_count, mut entries) = match walk_entries(&dirs) {
-        Ok(ok) => ok,
-        Err(err) => die(&format!("could not walk {:?}: {}", dirs, err)),
-    };
+    let (total_size, total_count, mut entries) = walk_entries(&dirs);
 
     let total_count = format_count(total_count);
     let count_width = total_count.len();
@@ -146,21 +143,20 @@ struct Entry<'a> {
     count: u64,
 }
 
-fn walk_entries<'a, P: AsRef<Path>>(paths: &'a [P]) -> IoResult<(u64, u64, Vec<Entry<'a>>)> {
-    let mut entries = vec![]; // TODO pre-allocate
-    let mut total_size = 0;
-    let mut total_count = 0;
-
-    for path in paths.iter().map(|p| p.as_ref()) {
-        let (size, count) = get_sizes(&path);
-        total_size += size;
-        total_count += count;
-        if path.exists() {
-            entries.push(Entry { path, size, count })
-        }
-    }
-
-    Ok((total_size, total_count, entries))
+fn walk_entries<'a, P: AsRef<Path>>(paths: &'a [P]) -> (u64, u64, Vec<Entry<'a>>) {
+    paths
+        .iter()
+        .map(|p| p.as_ref())
+        .map(|p| (p, get_sizes(&p)))
+        .fold(
+            (0, 0, vec![]),
+            |(total_size, total_count, mut entries), (path, (size, count))| {
+                if path.exists() {
+                    entries.push(Entry { path, size, count })
+                }
+                (total_size + size, total_count + count, entries)
+            },
+        )
 }
 
 fn get_sizes(path: &Path) -> (u64, u64) {
