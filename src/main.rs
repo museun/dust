@@ -1,4 +1,3 @@
-#![allow(dead_code, unused_variables)]
 use std::env;
 use std::io::Result as IoResult;
 use std::path::Path;
@@ -200,17 +199,4 @@ fn format_count(n: u64) -> String {
     let mut buf = String::new();
     comma(n, &mut buf);
     buf
-}
-
-fn count_digits(mut n: u64) -> u64 {
-    if n == 0 {
-        return 1;
-    }
-
-    let mut x = 0;
-    while n > 0 {
-        n /= 10;
-        x += 1;
-    }
-    x
 }
