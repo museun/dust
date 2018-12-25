@@ -57,30 +57,15 @@ impl Opts {
     }
 }
 
-fn die(msg: impl AsRef<str>) -> ! {
-    eprintln!("error: {}", msg.as_ref());
-    std::process::exit(1)
-}
-
 fn main() {
     let opts = Opts::parse();
-    let dirs: Vec<_> = match glob(&opts.input) {
-        Ok(ok) => ok,
-        Err(err) => die(&format!(
-            "could not use that pattern {}: {}",
-            &opts.input, err
-        )),
-    }
-    .collect::<Result<_, _>>()
-    .unwrap(); // probably can't happen
-
-    let (total_size, total_count, mut entries) = walk_entries(dirs.iter().map(|p| p.as_ref()));
-
+    let dirs = glob(&opts.input).unwrap().filter_map(|p| p.ok());
+    let (total_size, total_count, mut entries) = walk_entries(dirs);
     let total_count = format_count(total_count);
     let count_width = total_count.len();
 
     if opts.path {
-        entries.sort_unstable_by_key(|e| e.path)
+        entries.sort_unstable_by(|l, r| l.path.cmp(&r.path))
     } else {
         entries.sort_unstable_by_key(|e| e.size)
     };
@@ -136,25 +121,31 @@ fn main() {
 }
 
 #[derive(Debug)]
-struct Entry<'a> {
-    path: &'a Path,
+struct Entry {
+    path: PathBuf,
     size: u64,
     count: u64,
 }
 
-fn walk_entries<'a, I>(paths: I) -> (u64, u64, Vec<Entry<'a>>)
+fn walk_entries<I>(paths: I) -> (u64, u64, Vec<Entry>)
 where
-    I: IntoIterator<Item = &'a Path>,
+    I: IntoIterator<Item = PathBuf>,
 {
-    paths.into_iter().map(|p| (p, get_sizes(&p))).fold(
-        (0, 0, vec![]),
-        |(total_size, total_count, mut entries), (path, (size, count))| {
-            if path.exists() {
-                entries.push(Entry { path, size, count })
-            }
-            (total_size + size, total_count + count, entries)
-        },
-    )
+    paths
+        .into_iter()
+        .map(|p| {
+            let sz = get_sizes(&p);
+            (p, sz)
+        })
+        .fold(
+            (0, 0, vec![]),
+            |(total_size, total_count, mut entries), (path, (size, count))| {
+                if path.exists() {
+                    entries.push(Entry { path, size, count })
+                }
+                (total_size + size, total_count + count, entries)
+            },
+        )
 }
 
 fn get_sizes(path: &Path) -> (u64, u64) {
