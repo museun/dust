@@ -1,5 +1,5 @@
 use std::env;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use getopts::Options;
 use glob::glob;
@@ -74,7 +74,7 @@ fn main() {
     .collect::<Result<_, _>>()
     .unwrap(); // probably can't happen
 
-    let (total_size, total_count, mut entries) = walk_entries(&dirs);
+    let (total_size, total_count, mut entries) = walk_entries(dirs.iter().map(|p| p.as_ref()));
 
     let total_count = format_count(total_count);
     let count_width = total_count.len();
@@ -142,20 +142,19 @@ struct Entry<'a> {
     count: u64,
 }
 
-fn walk_entries<'a, P: AsRef<Path>>(paths: &'a [P]) -> (u64, u64, Vec<Entry<'a>>) {
-    paths
-        .iter()
-        .map(|p| p.as_ref())
-        .map(|p| (p, get_sizes(&p)))
-        .fold(
-            (0, 0, vec![]),
-            |(total_size, total_count, mut entries), (path, (size, count))| {
-                if path.exists() {
-                    entries.push(Entry { path, size, count })
-                }
-                (total_size + size, total_count + count, entries)
-            },
-        )
+fn walk_entries<'a, I>(paths: I) -> (u64, u64, Vec<Entry<'a>>)
+where
+    I: IntoIterator<Item = &'a Path>,
+{
+    paths.into_iter().map(|p| (p, get_sizes(&p))).fold(
+        (0, 0, vec![]),
+        |(total_size, total_count, mut entries), (path, (size, count))| {
+            if path.exists() {
+                entries.push(Entry { path, size, count })
+            }
+            (total_size + size, total_count + count, entries)
+        },
+    )
 }
 
 fn get_sizes(path: &Path) -> (u64, u64) {
