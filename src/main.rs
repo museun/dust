@@ -1,5 +1,4 @@
 use std::env;
-use std::io::Result as IoResult;
 use std::path::Path;
 
 use getopts::Options;
