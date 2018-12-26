@@ -98,25 +98,22 @@ fn main() {
         }
     }
 
-    let p = if opts.percentage { 8 } else { 0 };
-    let total_size = format_size(total_size);
-    let offset = p + count_width + 1;
-
+    let p = if opts.percentage { 8 } else { 0 } + 1;
     use std::iter::repeat;
     println!(
         "{}",
         repeat("-")
             .take(10)
-            .chain(repeat(" ").take(p + 2))
-            .chain(repeat("-").take(offset - p - 1))
+            .chain(repeat(" ").take(p + 1))
+            .chain(repeat("-").take(count_width))
             .collect::<String>()
     );
 
     println!(
         "{:>10} {:>offset$}",
-        total_size,
+        format_size(total_size),
         total_count,
-        offset = offset
+        offset = p + count_width
     );
 }
 
